@@ -1,12 +1,27 @@
 package com.example.mymoviesapp
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.mymoviesapp.databinding.ItemMovieBinding
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import android.util.Log
 
-class MovieAdapter(private var movies: MutableList<Movie>) : RecyclerView.Adapter<MovieAdapter.MovieViewHolder>() {
+class MovieAdapter(
+    private val context: Context,
+    public var movies: MutableList<Movie>,
+    private val showAddToFavoritesButton: Boolean,
+    private val clickListener: (Movie) -> Unit
+) : RecyclerView.Adapter<MovieAdapter.MovieViewHolder>() {
+
+    private val sharedPreferences: SharedPreferences =
+        context.getSharedPreferences("favorites", Context.MODE_PRIVATE)
+    private val gson = Gson()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MovieViewHolder {
         val binding = ItemMovieBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -14,7 +29,7 @@ class MovieAdapter(private var movies: MutableList<Movie>) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(holder: MovieViewHolder, position: Int) {
-        holder.bind(movies[position])
+        holder.bind(movies[position], clickListener, showAddToFavoritesButton)
     }
 
     override fun getItemCount() = movies.size
@@ -24,13 +39,69 @@ class MovieAdapter(private var movies: MutableList<Movie>) : RecyclerView.Adapte
         notifyDataSetChanged()
     }
 
+    fun clearMovies() {
+        movies.clear()
+        notifyDataSetChanged()
+    }
+
     inner class MovieViewHolder(private val binding: ItemMovieBinding) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(movie: Movie) {
+        fun bind(movie: Movie, clickListener: (Movie) -> Unit, showAddToFavoritesButton: Boolean) {
             binding.movieTitle.text = movie.title
             val posterUrl = "https://image.tmdb.org/t/p/w500" + movie.poster_path
             Glide.with(binding.moviePoster.context).load(posterUrl).into(binding.moviePoster)
+            binding.root.setOnClickListener {
+                clickListener(movie)
+            }
+
+            // Set movie details
+            binding.movieReleaseDate.text = "Release Date: ${movie.release_date}"
+            binding.movieRating.text = "Rating: ${movie.vote_average}"
+            binding.movieOverview.text = movie.overview
+
+            // Initially hide the details
+            binding.movieReleaseDate.visibility = View.GONE
+            binding.movieRating.visibility = View.GONE
+            binding.movieOverview.visibility = View.GONE
+
+            // Handle "Details" button click
+            binding.btnDetails.setOnClickListener {
+                if (binding.movieReleaseDate.visibility == View.GONE) {
+                    binding.movieReleaseDate.visibility = View.VISIBLE
+                    binding.movieRating.visibility = View.VISIBLE
+                    binding.movieOverview.visibility = View.VISIBLE
+                    binding.btnDetails.text = "Hide Details"
+                } else {
+                    binding.movieReleaseDate.visibility = View.GONE
+                    binding.movieRating.visibility = View.GONE
+                    binding.movieOverview.visibility = View.GONE
+                    binding.btnDetails.text = "Details"
+                }
+            }
+
+            if (showAddToFavoritesButton) {
+                binding.btnAddToFavorites.visibility = View.VISIBLE
+                binding.btnAddToFavorites.setOnClickListener {
+                    saveToFavorites(movie)
+                }
+            } else {
+                binding.btnAddToFavorites.visibility = View.GONE
+            }
+        }
+
+        private fun saveToFavorites(movie: Movie) {
+            val editor = sharedPreferences.edit()
+            val json = sharedPreferences.getString("favorites_list", null)
+            val type = object : TypeToken<MutableList<Movie>>() {}.type
+            val favorites: MutableList<Movie> = gson.fromJson(json, type) ?: mutableListOf()
+            if (!favorites.contains(movie)) {
+                favorites.add(movie)
+                val updatedJson = gson.toJson(favorites)
+                editor.putString("favorites_list", updatedJson)
+                editor.apply()
+                Log.d("Favorites", "Movie added to favorites: ${movie.title}")
+            } else {
+                Log.d("Favorites", "Movie already in favorites: ${movie.title}")
+            }
         }
     }
 }
-
-

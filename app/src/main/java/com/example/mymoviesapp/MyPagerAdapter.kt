@@ -4,6 +4,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
 
+
+
 class MyPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
 
     private val tabTitles = arrayOf("Popular", "Search", "Favorites")
@@ -16,7 +18,7 @@ class MyPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
         return when (position) {
             0 -> FirstFragment()
             1 -> SecondFragment()
-            2 -> ThirdFragment()
+            2 -> FavoritesFragment() // Use FavoritesFragment here
             else -> Fragment() // Default case, shouldn't occur
         }
     }
@@ -25,3 +27,4 @@ class MyPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm) {
         return tabTitles[position]
     }
 }
+
