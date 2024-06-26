@@ -11,6 +11,8 @@ import com.example.mymoviesapp.databinding.ItemMovieBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
+import android.content.Intent
 
 class MovieAdapter(
     private val context: Context,
@@ -69,23 +71,37 @@ class MovieAdapter(
                     binding.movieReleaseDate.visibility = View.VISIBLE
                     binding.movieRating.visibility = View.VISIBLE
                     binding.movieOverview.visibility = View.VISIBLE
-                    binding.btnDetails.text = "Hide Details"
+                    binding.btnDetails.text = "Hide Summary"
                 } else {
                     binding.movieReleaseDate.visibility = View.GONE
                     binding.movieRating.visibility = View.GONE
                     binding.movieOverview.visibility = View.GONE
-                    binding.btnDetails.text = "Details"
+                    binding.btnDetails.text = "Summary"
                 }
             }
 
             if (showAddToFavoritesButton) {
                 binding.btnAddToFavorites.visibility = View.VISIBLE
+                binding.btnRmvToFavorites.visibility = View.GONE
                 binding.btnAddToFavorites.setOnClickListener {
                     saveToFavorites(movie)
                 }
             } else {
                 binding.btnAddToFavorites.visibility = View.GONE
+                binding.btnRmvToFavorites.visibility = View.VISIBLE
             }
+            binding.btnRmvToFavorites.setOnClickListener {
+                removeFromFavorites(movie)
+            }
+
+            binding.btnDetails2.setOnClickListener {
+                val intent = Intent(context, MovieDetailsActivity::class.java)
+                intent.putExtra("movie", movie)
+                context.startActivity(intent)
+            }
+
+        }
+
         }
 
         private fun saveToFavorites(movie: Movie) {
@@ -101,7 +117,36 @@ class MovieAdapter(
                 Log.d("Favorites", "Movie added to favorites: ${movie.title}")
             } else {
                 Log.d("Favorites", "Movie already in favorites: ${movie.title}")
+                showAlertAlreadyInFavorites()
             }
         }
+    private fun showAlertAlreadyInFavorites() {
+        AlertDialog.Builder(context)
+            .setTitle("Already in Favorites")
+            .setMessage("This movie is already in your favorites list.")
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
     }
+
+
+    private fun removeFromFavorites(movie: Movie) {
+        val editor = sharedPreferences.edit()
+        val json = sharedPreferences.getString("favorites_list", null)
+        val type = object : TypeToken<MutableList<Movie>>() {}.type
+        val favorites: MutableList<Movie> = gson.fromJson(json, type) ?: mutableListOf()
+        if (favorites.contains(movie)) {
+            favorites.remove(movie)
+            val updatedJson = gson.toJson(favorites)
+            editor.putString("favorites_list", updatedJson)
+            editor.apply()
+            Log.d("Favorites", "Movie removed from favorites: ${movie.title}")
+            movies.remove(movie)
+            notifyDataSetChanged()
+        } else {
+            Log.d("Favorites", "Movie not found in favorites: ${movie.title}")
+        }
+    }
+
 }

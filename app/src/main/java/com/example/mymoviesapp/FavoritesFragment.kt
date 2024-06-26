@@ -36,6 +36,7 @@ class FavoritesFragment : Fragment() {
         gson = Gson()
 
 
+
         binding.btnClearFavorites.setOnClickListener {
             clearFavorites()
         }
